@@ -1,0 +1,971 @@
+!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Roulette - Random Anime Picker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --neon-pink: #ff2a6d;
+            --neon-blue: #05d9e8;
+            --neon-purple: #d300f9;
+            --dark-bg: #0d0221;
+            --darker-bg: #090114;
+            --card-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--dark-bg);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255, 42, 109, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(5, 217, 232, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(211, 0, 249, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            animation: bgPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes bgPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--neon-blue);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 20s infinite linear;
+        }
+
+        @keyframes float {
+            from { transform: translateY(100vh) translateX(0); }
+            to { transform: translateY(-10vh) translateX(100px); }
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 1rem;
+            position: relative;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 8vw, 4rem);
+            background: linear-gradient(135deg, var(--neon-pink), var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(255, 42, 109, 0.5);
+            letter-spacing: -2px;
+            margin-bottom: 0.5rem;
+            animation: titleGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--neon-blue);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+        }
+
+        .roulette-container {
+            width: 100%;
+            max-width: 500px;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .anime-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        0 0 40px rgba(255, 42, 109, 0.1);
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+        }
+
+        .anime-card.rolling {
+            animation: cardShake 0.1s infinite;
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 60px rgba(255, 42, 109, 0.5);
+        }
+
+        @keyframes cardShake {
+            0%, 100% { transform: translateX(0) rotateY(0deg); }
+            25% { transform: translateX(-5px) rotateY(-5deg); }
+            75% { transform: translateX(5px) rotateY(5deg); }
+        }
+
+        .anime-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #1a0b2e, #2d1b4e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .anime-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .anime-card:hover .anime-image img {
+            transform: scale(1.05);
+        }
+
+        .anime-image-placeholder {
+            font-size: 5rem;
+            opacity: 0.3;
+        }
+
+        .anime-info {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .anime-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .anime-meta {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-tag {
+            background: rgba(255, 42, 109, 0.2);
+            border: 1px solid var(--neon-pink);
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--neon-pink);
+            font-weight: 600;
+        }
+
+        .meta-tag.year {
+            background: rgba(5, 217, 232, 0.2);
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
+
+        .anime-description {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .where-to-watch {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .where-to-watch h3 {
+            font-size: 0.9rem;
+            color: var(--neon-blue);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .streaming-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .streaming-tag {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.3rem 0.8rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .streaming-tag.netflix { background: rgba(229, 9, 20, 0.3); border-color: #e50914; }
+        .streaming-tag.crunchyroll { background: rgba(244, 117, 33, 0.3); border-color: #f47521; }
+        .streaming-tag.hulu { background: rgba(28, 231, 131, 0.3); border-color: #1ce783; }
+        .streaming-tag.hidive { background: rgba(0, 174, 239, 0.3); border-color: #00aeef; }
+        .streaming-tag.prime { background: rgba(0, 168, 225, 0.3); border-color: #00a8e1; }
+        .streaming-tag.funimation { background: rgba(163, 0, 89, 0.3); border-color: #a30059; }
+
+        .popularity-badge {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .popularity-badge.popular {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+        }
+
+        .popularity-badge.classic {
+            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+            color: #000;
+        }
+
+        .popularity-badge.hidden-gem {
+            background: linear-gradient(135deg, var(--neon-purple), #9d00ff);
+            color: #fff;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .roll-button {
+            background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 1.2rem 4rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(255, 42, 109, 0.4),
+                        0 0 60px rgba(255, 42, 109, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .roll-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 50px rgba(255, 42, 109, 0.6),
+                        0 0 80px rgba(255, 42, 109, 0.3);
+        }
+
+        .roll-button:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+
+        .roll-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .roll-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .roll-button:hover::before {
+            left: 100%;
+        }
+
+        .clear-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            padding: 1.2rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .clear-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 30px rgba(5, 217, 232, 0.3);
+        }
+
+        .history-section {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .history-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .clear-history-btn {
+            background: rgba(255, 42, 109, 0.2);
+            border: 1px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .clear-history-btn:hover {
+            background: var(--neon-pink);
+            color: white;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            border-color: var(--neon-blue);
+        }
+
+        .history-item.watched::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--neon-blue);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-item-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-bottom: 0.3rem;
+            color: #fff;
+        }
+
+        .history-item-year {
+            font-size: 0.8rem;
+            color: var(--neon-blue);
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: var(--neon-pink);
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 20px rgba(255, 42, 109, 0.4);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .anime-image {
+                height: 250px;
+            }
+            
+            .roll-button {
+                padding: 1rem 3rem;
+                font-size: 1.2rem;
+            }
+            
+            .history-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .button-group {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .button-group button {
+                width: 100%;
+            }
+        }
+
+        .loading-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--neon-pink);
+            text-shadow: 0 0 20px var(--neon-pink);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .rolling .loading-text {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <header>
+        <h1>🎰 ANIME ROULETTE</h1>
+        <p class="subtitle">Discover Your Next Watch (1998-2026)</p>
+    </header>
+
+    <div class="container">
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-value" id="totalAnime">150</div>
+                <div class="stat-label">Total Anime</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="watchedCount">0</div>
+                <div class="stat-label">Watched</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="remainingCount">150</div>
+                <div class="stat-label">Remaining</div>
+            </div>
+        </div>
+
+        <div class="filters" id="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="popular">Popular</button>
+            <button class="filter-btn" data-filter="classic">Classics</button>
+            <button class="filter-btn" data-filter="hidden">Hidden Gems</button>
+        </div>
+
+        <div class="roulette-container">
+            <div class="anime-card" id="animeCard">
+                <div class="anime-image" id="animeImage">
+                    <div class="anime-image-placeholder">🎌</div>
+                    <div class="loading-text">ROLLING...</div>
+                </div>
+                <div class="anime-info">
+                    <h2 class="anime-title" id="animeTitle">Ready to Roll?</h2>
+                    <div class="anime-meta" id="animeMeta">
+                        <span class="meta-tag year">1998-2026</span>
+                        <span class="meta-tag">Various Genres</span>
+                    </div>
+                    <p class="anime-description" id="animeDesc">
+                        Click the button below to randomly select an anime from our curated collection. Already watched anime won't appear again until you clear your history!
+                    </p>
+                    
+                    <div class="where-to-watch" id="whereToWatch" style="display: none;">
+                        <h3>📺 Where to Watch</h3>
+                        <div class="streaming-list" id="streamingList"></div>
+                    </div>
+                    
+                    <span class="popularity-badge popular" id="popularityBadge" style="display: none;"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="roll-button" id="rollBtn" onclick="rollAnime()">
+                🎲 ROLL THE DICE
+            </button>
+            <button class="clear-button" id="clearBtn" onclick="clearWatched()">
+                🗑️ CLEAR HISTORY
+            </button>
+        </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <h3 class="history-title">Your Watch History</h3>
+                <button class="clear-history-btn" onclick="clearWatched()">Clear All</button>
+            </div>
+            <div class="history-grid" id="historyGrid">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📝</div>
+                    <p>No anime rolled yet. Start rolling!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const animeDatabase = [
+            { title: "Attack on Titan", year: 2013, genre: "Dark Fantasy", popularity: "popular", desc: "Humanity fights for survival against man-eating Titans.", streaming: ["Crunchyroll", "Hulu", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/10/47347.jpg" },
+            { title: "Death Note", year: 2006, genre: "Psychological Thriller", popularity: "popular", desc: "A high school student discovers a supernatural notebook.", streaming: ["Netflix", "Hulu", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/9/9453.jpg" },
+            { title: "Demon Slayer", year: 2019, genre: "Dark Fantasy", popularity: "popular", desc: "A boy becomes a demon slayer to cure his sister.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1286/99889.jpg" },
+            { title: "Jujutsu Kaisen", year: 2020, genre: "Dark Fantasy", popularity: "popular", desc: "A student joins a secret organization to fight curses.", streaming: ["Crunchyroll", "HBO Max"], image: "https://cdn.myanimelist.net/images/anime/1171/109222.jpg" },
+            { title: "My Hero Academia", year: 2016, genre: "Superhero", popularity: "popular", desc: "A boy born without powers dreams of becoming a hero.", streaming: ["Crunchyroll", "Hulu", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/10/78745.jpg" },
+            { title: "One Punch Man", year: 2015, genre: "Action/Comedy", popularity: "popular", desc: "A hero who can defeat any enemy with one punch.", streaming: ["Netflix", "Hulu", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/12/76049.jpg" },
+            { title: "Spy x Family", year: 2022, genre: "Action/Comedy", popularity: "popular", desc: "A spy creates a fake family for a mission.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/1441/122795.jpg" },
+            { title: "Chainsaw Man", year: 2022, genre: "Dark Fantasy", popularity: "popular", desc: "A devil hunter merges with his pet devil.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1806/126216.jpg" },
+            { title: "Solo Leveling", year: 2024, genre: "Action/Fantasy", popularity: "popular", desc: "The weakest hunter becomes the strongest.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1448/147351.jpg" },
+            { title: "Hunter x Hunter", year: 2011, genre: "Adventure", popularity: "popular", desc: "A boy searches for his father while becoming a Hunter.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/11/33657.jpg" },
+            { title: "Cowboy Bebop", year: 1998, genre: "Space Western", popularity: "classic", desc: "Bounty hunters travel through space in 2071.", streaming: ["Netflix", "Hulu", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/4/19644.jpg" },
+            { title: "Neon Genesis Evangelion", year: 1995, genre: "Mecha/Psychological", popularity: "classic", desc: "Teenagers pilot giant robots to save humanity.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1314/108941.jpg" },
+            { title: "Fullmetal Alchemist: Brotherhood", year: 2009, genre: "Dark Fantasy", popularity: "classic", desc: "Two brothers search for the Philosopher's Stone.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1223/96541.jpg" },
+            { title: "Code Geass", year: 2006, genre: "Mecha", popularity: "classic", desc: "A prince gains the power of absolute obedience.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/5/50331.jpg" },
+            { title: "Naruto", year: 2002, genre: "Action", popularity: "classic", desc: "A young ninja seeks recognition and dreams of becoming Hokage.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/13/17405.jpg" },
+            { title: "Bleach", year: 2004, genre: "Supernatural", popularity: "classic", desc: "A teenager gains the powers of a Soul Reaper.", streaming: ["Crunchyroll", "Hulu", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/3/40451.jpg" },
+            { title: "Gurren Lagann", year: 2007, genre: "Mecha", popularity: "classic", desc: "Humans fight to reclaim the surface from underground.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/3/8948.jpg" },
+            { title: "FLCL", year: 2000, genre: "Sci-Fi/Comedy", popularity: "classic", desc: "A boy's life changes when a strange girl appears.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/7/77356.jpg" },
+            { title: "Samurai Champloo", year: 2004, genre: "Action/Adventure", popularity: "classic", desc: "A girl hires two swordsmen to find the samurai who smells of sunflowers.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/137/134601.jpg" },
+            { title: "Monster", year: 2004, genre: "Psychological Thriller", popularity: "classic", desc: "A doctor tracks down a former patient who is a dangerous killer.", streaming: ["Netflix", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/10/18793.jpg" },
+            { title: "Mushishi", year: 2005, genre: "Supernatural", popularity: "classic", desc: "A traveler studies mysterious creatures called Mushi.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/2/73862.jpg" },
+            { title: "The Melancholy of Haruhi Suzumiya", year: 2006, genre: "Sci-Fi/Comedy", popularity: "classic", desc: "A girl unknowingly has the power to change reality.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/5/75901.jpg" },
+            { title: "Clannad", year: 2007, genre: "Drama/Romance", popularity: "classic", desc: "A delinquent helps various girls with their problems.", streaming: ["Hulu", "HiDive"], image: "https://cdn.myanimelist.net/images/anime/13/24647.jpg" },
+            { title: "Hajime no Ippo", year: 2000, genre: "Sports", popularity: "classic", desc: "A bullied teen becomes a professional boxer.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/13/75094.jpg" },
+            { title: "Dorohedoro", year: 2020, genre: "Dark Fantasy", popularity: "hidden-gem", desc: "A man with a reptile head searches for the sorcerer who cursed him.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1135/114867.jpg" },
+            { title: "Paradise Kiss", year: 2005, genre: "Romance/Drama", popularity: "hidden-gem", desc: "A student becomes a fashion model and enters a new world.", streaming: ["Crunchyroll", "Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/11/76667.jpg" },
+            { title: "Space Dandy", year: 2014, genre: "Sci-Fi/Comedy", popularity: "hidden-gem", desc: "A dandy guy in space hunts for undiscovered aliens.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/4/56611.jpg" },
+            { title: "Tiger & Bunny", year: 2011, genre: "Superhero", popularity: "hidden-gem", desc: "Veteran and rookie heroes team up in a corporate-sponsored world.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/10/78811.jpg" },
+            { title: "Osomatsu-san", year: 2015, genre: "Comedy", popularity: "hidden-gem", desc: "Six identical sextuplets are now unemployed adults.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/9/74380.jpg" },
+            { title: "Sonny Boy", year: 2021, genre: "Sci-Fi/Mystery", popularity: "hidden-gem", desc: "Students are transported to a void dimension with superpowers.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1509/117149.jpg" },
+            { title: "Kaiba", year: 2008, genre: "Sci-Fi", popularity: "hidden-gem", desc: "A man with no memories travels a universe where memories are currency.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/3/21118.jpg" },
+            { title: "Wolf's Rain", year: 2003, genre: "Fantasy/Adventure", popularity: "hidden-gem", desc: "Wolves search for paradise as the world ends.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/5/59403.jpg" },
+            { title: "Yurikuma Arashi", year: 2015, genre: "Fantasy/Psychological", popularity: "hidden-gem", desc: "Bears and humans are separated after a planetarium explosion.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/6/72234.jpg" },
+            { title: "RahXephon", year: 2002, genre: "Mecha", popularity: "hidden-gem", desc: "A boy pilots a mysterious mech against invading beings.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/11/75252.jpg" },
+            { title: "Hell Girl", year: 2005, genre: "Supernatural", popularity: "hidden-gem", desc: "A mysterious girl offers to send people to hell for revenge.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/10/16536.jpg" },
+            { title: "Hikaru no Go", year: 2001, genre: "Sports", popularity: "hidden-gem", desc: "A boy learns the ancient game of Go from a ghost.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/12/78317.jpg" },
+            { title: "The Twelve Kingdoms", year: 2002, genre: "Fantasy", popularity: "hidden-gem", desc: "A girl discovers she is an empress in another world.", streaming: ["Crunchyroll", "Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/6/50859.jpg" },
+            { title: "Princess Tutu", year: 2002, genre: "Fantasy/Romance", popularity: "hidden-gem", desc: "A duck becomes a girl who transforms into a magical ballerina.", streaming: ["HiDive", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/13/32209.jpg" },
+            { title: "Tsuritama", year: 2012, genre: "Slice of Life", popularity: "hidden-gem", desc: "A boy learns to fish with the help of an alien.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/5/35749.jpg" },
+            { title: "Welcome to Irabu's Office", year: 2009, genre: "Psychological/Comedy", popularity: "hidden-gem", desc: "A psychiatrist treats patients with unusual methods.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/3/17753.jpg" },
+            { title: "Master Keaton", year: 1998, genre: "Mystery", popularity: "hidden-gem", desc: "An archaeologist and former SAS soldier solves mysteries.", streaming: ["Amazon Prime", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/2/18594.jpg" },
+            { title: "Shonan Junai Gumi", year: 1994, genre: "Comedy/Action", popularity: "hidden-gem", desc: "Onizuka's delinquent days before becoming a teacher.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/11/29522.jpg" },
+            { title: "Black Jack", year: 2004, genre: "Medical/Drama", popularity: "hidden-gem", desc: "An unlicensed genius surgeon takes on unusual cases.", streaming: ["Crunchyroll", "Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/6/17872.jpg" },
+            { title: "Zipang", year: 2004, genre: "Military/Sci-Fi", popularity: "hidden-gem", desc: "A modern warship travels back to WWII.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/2/23103.jpg" },
+            { title: "Carried by the Wind: Tsukikage Ran", year: 2000, genre: "Comedy/Adventure", popularity: "hidden-gem", desc: "A sake-loving female samurai travels with a Chinese martial artist.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/8/17806.jpg" },
+            { title: "Popee the Performer", year: 2000, genre: "Comedy/Horror", popularity: "hidden-gem", desc: "Surreal 3D animation about a clown in a circus.", streaming: ["YouTube"], image: "https://cdn.myanimelist.net/images/anime/3/24641.jpg" },
+            { title: "Dirty Pair OVA", year: 1987, genre: "Sci-Fi/Action", popularity: "hidden-gem", desc: "Two trouble consultants cause destruction while solving cases.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/10/61303.jpg" },
+            { title: "Kakugo no Susume", year: 1996, genre: "Action/Horror", popularity: "hidden-gem", desc: "Siblings fight monsters using armor made from souls.", streaming: ["Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/12/21183.jpg" },
+            { title: "Mob Psycho 100", year: 2016, genre: "Supernatural", popularity: "popular", desc: "A powerful psychic tries to live a normal life.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/8/80356.jpg" },
+            { title: "Steins;Gate", year: 2011, genre: "Sci-Fi", popularity: "classic", desc: "Scientists accidentally discover time travel.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/5/73199.jpg" },
+            { title: "Haikyu!!", year: 2014, genre: "Sports", popularity: "popular", desc: "A short boy aims to become a volleyball champion.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/7/76014.jpg" },
+            { title: "Ranking of Kings", year: 2021, genre: "Fantasy/Adventure", popularity: "hidden-gem", desc: "A deaf prince proves his worth as a king.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/1347/117616.jpg" },
+            { title: "To Your Eternity", year: 2021, genre: "Fantasy/Drama", popularity: "popular", desc: "An immortal being learns what it means to be human.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1130/120002.jpg" },
+            { title: "Hell's Paradise", year: 2023, genre: "Action/Fantasy", popularity: "popular", desc: "Criminals search for the elixir of life on a mysterious island.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1654/126029.jpg" },
+            { title: "Cyberpunk: Edgerunners", year: 2022, genre: "Sci-Fi/Action", popularity: "popular", desc: "A street kid becomes an outlaw mercenary in a dystopia.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1818/126435.jpg" },
+            { title: "Odd Taxi", year: 2021, genre: "Mystery", popularity: "hidden-gem", desc: "A taxi driver gets involved in a missing girl case.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1981/113348.jpg" },
+            { title: "Ping Pong the Animation", year: 2014, genre: "Sports", popularity: "hidden-gem", desc: "Two childhood friends compete in table tennis.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/10/58041.jpg" },
+            { title: "March Comes in Like a Lion", year: 2016, genre: "Drama", popularity: "hidden-gem", desc: "A professional shogi player struggles with depression.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/6/77089.jpg" },
+            { title: "Vivy: Fluorite Eye's Song", year: 2021, genre: "Sci-Fi", popularity: "hidden-gem", desc: "An AI songstress tries to prevent an AI apocalypse.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/1624/111683.jpg" },
+            { title: "86", year: 2021, genre: "Mecha/Action", popularity: "hidden-gem", desc: "Soldiers fight from remote-controlled mechs.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1109/118443.jpg" },
+            { title: "Bocchi the Rock!", year: 2022, genre: "Music/Comedy", popularity: "hidden-gem", desc: "A socially anxious girl joins a rock band.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1448/127956.jpg" },
+            { title: "Frieren: Beyond Journey's End", year: 2023, genre: "Fantasy", popularity: "popular", desc: "An elf mage journeys to understand humanity after defeating the demon king.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1015/138006.jpg" },
+            { title: "Blue Eye Samurai", year: 2023, genre: "Action", popularity: "hidden-gem", desc: "A mixed-race samurai seeks revenge in Edo Japan.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1927/132758.jpg" },
+            { title: "Pluto", year: 2023, genre: "Sci-Fi/Mystery", popularity: "hidden-gem", desc: "A robot detective investigates murders of great robots.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1026/138529.jpg" },
+            { title: "Dungeon Meshi", year: 2024, genre: "Fantasy/Comedy", popularity: "hidden-gem", desc: "Adventurers eat monsters while rescuing a party member.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1711/142478.jpg" },
+            { title: "Oshi no Ko", year: 2023, genre: "Drama/Supernatural", popularity: "popular", desc: "A doctor is reincarnated as the child of his idol.", streaming: ["Crunchyroll", "Hidive"], image: "https://cdn.myanimelist.net/images/anime/1812/134736.jpg" },
+            { title: "Zom 100", year: 2023, genre: "Comedy/Horror", popularity: "hidden-gem", desc: "A man creates a bucket list during a zombie apocalypse.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1384/136408.jpg" },
+            { title: "Heavenly Delusion", year: 2023, genre: "Sci-Fi/Mystery", popularity: "hidden-gem", desc: "Children escape a facility into a post-apocalyptic world.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1379/136885.jpg" },
+            { title: "The Dangers in My Heart", year: 2023, genre: "Romance/Comedy", popularity: "hidden-gem", desc: "A loner falls for the most popular girl in class.", streaming: ["Crunchyroll", "Hidive"], image: "https://cdn.myanimelist.net/images/anime/1549/13329.jpg" },
+            { title: "You and I Are Polar Opposites", year: 2026, genre: "Romance/Comedy", popularity: "hidden-gem", desc: "A new romantic comedy about opposites attracting.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1827/146115.jpg" },
+            { title: "Hana-Kimi", year: 2026, genre: "Romance/Comedy", popularity: "hidden-gem", desc: "A girl disguises herself as a boy to attend an all-boys school.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1642/146407.jpg" },
+            { title: "Fire Force", year: 2019, genre: "Action/Fantasy", popularity: "popular", desc: "Firefighters battle spontaneous human combustion.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1664/103275.jpg" },
+            { title: "Vinland Saga", year: 2019, genre: "Action/Drama", popularity: "popular", desc: "A Viking boy seeks revenge for his father's death.", streaming: ["Crunchyroll", "Netflix", "Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/1500/103005.jpg" },
+            { title: "Made in Abyss", year: 2017, genre: "Adventure/Fantasy", popularity: "popular", desc: "Children explore a giant pit full of wonders and horrors.", streaming: ["Crunchyroll", "Amazon Prime", "Hidive"], image: "https://cdn.myanimelist.net/images/anime/6/86733.jpg" },
+            { title: "Land of the Lustrous", year: 2017, genre: "Fantasy/Drama", popularity: "hidden-gem", desc: "Gem creatures fight off moon people who want to shatter them.", streaming: ["Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/3/88293.jpg" },
+            { title: "Beastars", year: 2019, genre: "Drama", popularity: "hidden-gem", desc: "A wolf student navigates a world of herbivores and carnivores.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1234/102008.jpg" },
+            { title: "Kaguya-sama: Love is War", year: 2019, genre: "Romance/Comedy", popularity: "popular", desc: "Two geniuses try to make the other confess their love first.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/1295/106551.jpg" },
+            { title: "Dr. Stone", year: 2019, genre: "Sci-Fi/Adventure", popularity: "popular", desc: "A genius rebuilds civilization after humanity is petrified.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1613/102576.jpg" },
+            { title: "The Promised Neverland", year: 2019, genre: "Thriller", popularity: "popular", desc: "Orphans discover their orphanage is a farm.", streaming: ["Crunchyroll", "Hulu", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/1830/118780.jpg" },
+            { title: "Keep Your Hands Off Eizouken!", year: 2020, genre: "Comedy", popularity: "hidden-gem", desc: "Three girls create their own anime.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1682/101469.jpg" },
+            { title: "Great Pretender", year: 2020, genre: "Crime/Comedy", popularity: "hidden-gem", desc: "Con artists scam criminals in elaborate heists.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1418/107954.jpg" },
+            { title: "Akudama Drive", year: 2020, genre: "Cyberpunk/Action", popularity: "hidden-gem", desc: "Criminals are recruited for a dangerous mission in a dystopian city.", streaming: ["Funimation"], image: "https://cdn.myanimelist.net/images/anime/1468/109172.jpg" },
+            { title: "Wonder Egg Priority", year: 2021, genre: "Psychological", popularity: "hidden-gem", desc: "A girl buys eggs that let her save people from suicide.", streaming: ["Funimation"], image: "https://cdn.myanimelist.net/images/anime/1311/120270.jpg" },
+            { title: "Nomad: Megalo Box 2", year: 2021, genre: "Sports/Drama", popularity: "hidden-gem", desc: "A boxer struggles with his past in a cyberpunk setting.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/1190/113352.jpg" },
+            { title: "Lycoris Recoil", year: 2022, genre: "Action", popularity: "hidden-gem", desc: "Two girls run a cafe while working as secret agents.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1263/124145.jpg" },
+            { title: "Blue Lock", year: 2022, genre: "Sports", popularity: "popular", desc: "300 strikers compete to become Japan's best soccer player.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1491/132864.jpg" },
+            { title: "Summertime Render", year: 2022, genre: "Mystery/Thriller", popularity: "hidden-gem", desc: "A man relives the same days while investigating a death.", streaming: ["Crunchyroll", "Disney+"], image: "https://cdn.myanimelist.net/images/anime/1397/120703.jpg" },
+            { title: "Call of the Night", year: 2022, genre: "Supernatural/Romance", popularity: "hidden-gem", desc: "A boy meets a vampire and explores the night.", streaming: ["Crunchyroll", "Hidive"], image: "https://cdn.myanimelist.net/images/anime/1045/123711.jpg" },
+            { title: "The Apothecary Diaries", year: 2023, genre: "Mystery", popularity: "hidden-gem", desc: "A pharmacist solves mysteries in the imperial palace.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1708/138033.jpg" },
+            { title: "Berserk", year: 1997, genre: "Dark Fantasy", popularity: "classic", desc: "A mercenary seeks revenge in a brutal medieval world.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1384/119988.jpg" },
+            { title: "Serial Experiments Lain", year: 1998, genre: "Psychological", popularity: "classic", desc: "A girl becomes obsessed with the Wired.", streaming: ["Funimation"], image: "https://cdn.myanimelist.net/images/anime/1643/138581.jpg" },
+            { title: "Trigun", year: 1998, genre: "Sci-Fi/Western", popularity: "classic", desc: "A pacifist gunslinger with a $$60 billion bounty.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1368/93571.jpg" },
+            { title: "Rurouni Kenshin", year: 1996, genre: "Action", popularity: "classic", desc: "A wandering swordsman protects those he meets.", streaming: ["Crunchyroll", "Hulu", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/1343/102422.jpg" },
+            { title: "Initial D", year: 1998, genre: "Sports", popularity: "classic", desc: "A tofu delivery boy becomes a street racing legend.", streaming: ["Funimation", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1408/127189.jpg" },
+            { title: "Great Teacher Onizuka", year: 1999, genre: "Comedy/Drama", popularity: "classic", desc: "A former gangster becomes a teacher.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/13/11460.jpg" },
+            { title: "Hellsing", year: 2001, genre: "Supernatural/Action", popularity: "classic", desc: "A vampire serves the Hellsing organization.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/10/19956.jpg" },
+            { title: "Azumanga Daioh", year: 2002, genre: "Comedy/Slice of Life", popularity: "classic", desc: "The everyday lives of high school girls.", streaming: ["HiDive", "Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/1/247.jpg" },
+            { title: "Ghost in the Shell: Stand Alone Complex", year: 2002, genre: "Sci-Fi", popularity: "classic", desc: "A special forces team fights cybercrime in 2030.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/11/50857.jpg" },
+            { title: "Planetes", year: 2003, genre: "Sci-Fi", popularity: "hidden-gem", desc: "Space garbage collectors in 2075.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/4/50337.jpg" },
+            { title: "Beck: Mongolian Chop Squad", year: 2004, genre: "Music/Drama", popularity: "hidden-gem", desc: "A boy learns guitar and joins a rock band.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/11/11636.jpg" },
+            { title: "Paranoia Agent", year: 2004, genre: "Psychological", popularity: "hidden-gem", desc: "A detective investigates attacks by a boy on rollerblades.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/7/7804.jpg" },
+            { title: "Gankutsuou", year: 2004, genre: "Drama", popularity: "hidden-gem", desc: "A sci-fi retelling of The Count of Monte Cristo.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/10/2235.jpg" },
+            { title: "Eureka Seven", year: 2005, genre: "Mecha/Romance", popularity: "classic", desc: "A boy joins a group of rebels piloting mechs.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/12/34443.jpg" },
+            { title: "Black Lagoon", year: 2006, genre: "Action", popularity: "classic", desc: "A Japanese businessman joins a mercenary crew.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/6/7333.jpg" },
+            { title: "Baccano!", year: 2007, genre: "Action/Mystery", popularity: "hidden-gem", desc: "Immortal gangsters in 1930s America.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/3/14547.jpg" },
+            { title: "Sayonara Zetsubou Sensei", year: 2007, genre: "Comedy", popularity: "hidden-gem", desc: "A suicidal teacher and his unusual students.", streaming: ["Crunchyroll"], image: "https://cdn.myanimelist.net/images/anime/5/6559.jpg" },
+            { title: "Spice and Wolf", year: 2008, genre: "Fantasy/Romance", popularity: "classic", desc: "A traveling merchant partners with a wolf goddess.", streaming: ["Crunchyroll", "Funimation", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/5/59449.jpg" },
+            { title: "Toradora!", year: 2008, genre: "Romance/Comedy", popularity: "classic", desc: "Two outcasts help each other with their crushes.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/13/22128.jpg" },
+            { title: "Bakemonogatari", year: 2009, genre: "Supernatural", popularity: "popular", desc: "A vampire survivor helps girls with supernatural oddities.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/11/75274.jpg" },
+            { title: "K-On!", year: 2009, genre: "Music/Slice of Life", popularity: "popular", desc: "Girls form a light music club.", streaming: ["Crunchyroll", "Hidive"], image: "https://cdn.myanimelist.net/images/anime/10/76120.jpg" },
+            { title: "Puella Magi Madoka Magica", year: 2011, genre: "Magical Girl", popularity: "classic", desc: "A dark twist on the magical girl genre.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/11/55225.jpg" },
+            { title: "Anohana", year: 2011, genre: "Drama", popularity: "popular", desc: "Friends reunite to help the ghost of their childhood friend.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/5/79697.jpg" },
+            { title: "Psycho-Pass", year: 2012, genre: "Sci-Fi/Crime", popularity: "popular", desc: "Police use a system that measures criminal intent.", streaming: ["Crunchyroll", "Funimation"], image: "https://cdn.myanimelist.net/images/anime/5/43399.jpg" },
+            { title: "JoJo's Bizarre Adventure", year: 2012, genre: "Action", popularity: "popular", desc: "Multiple generations of the Joestar family fight evil.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/3/40409.jpg" },
+            { title: "Kill la Kill", year: 2013, genre: "Action", popularity: "popular", desc: "A girl seeks revenge with a talking uniform.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1464/111943.jpg" },
+            { title: "Your Lie in April", year: 2014, genre: "Drama/Romance", popularity: "popular", desc: "A pianist meets a violinist who changes his life.", streaming: ["Crunchyroll", "Netflix"], image: "https://cdn.myanimelist.net/images/anime/3/67177.jpg" },
+            { title: "Erased", year: 2016, genre: "Mystery/Thriller", popularity: "popular", desc: "A man goes back in time to prevent a kidnapping.", streaming: ["Crunchyroll", "Netflix", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/10/77957.jpg" },
+            { title: "A Silent Voice", year: 2016, genre: "Drama/Romance", popularity: "popular", desc: "A bully seeks redemption with his former deaf victim.", streaming: ["Netflix", "Amazon Prime"], image: "https://cdn.myanimelist.net/images/anime/1122/96435.jpg" },
+            { title: "Violet Evergarden", year: 2018, genre: "Drama", popularity: "popular", desc: "A soldier becomes a ghostwriter to understand emotions.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/1795/95088.jpg" },
+            { title: "Devilman Crybaby", year: 2018, genre: "Dark Fantasy", popularity: "hidden-gem", desc: "A sensitive boy merges with a demon to save humanity.", streaming: ["Netflix"], image: "https://cdn.myanimelist.net/images/anime/2/89973.jpg" },
+            { title: "Horimiya", year: 2021, genre: "Romance/Comedy", popularity: "popular", desc: "Two students with secret lives fall in love.", streaming: ["Crunchyroll", "Hulu"], image: "https://cdn.myanimelist.net/images/anime/1695/111486.jpg" }
+        ];
+
+        let currentFilter = 'all';
+        let isRolling = false;
+        let watchedTitles = new Set();
+        let currentHistory = [];
+
+        // Create floating particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+
+        createParticles();
+
+        // Filter functionality
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                updateStats();
+            });
+        });
+
+        function getFilteredAnime() {
+            let filtered = animeDatabase;
+            if (currentFilter !== 'all') {
+                filtered = animeDatabase.filter(anime => anime.popularity === currentFilter);
+            }
+            // Remove already watched
+            return filtered.filter(anime => !watchedTitles.has(anime.title));
+        }
+
+        function updateStats() {
+            const total = animeDatabase.length;
+            const watched = watchedTitles.size;
+            const remaining = getFilteredAnime().length;
+            
+            document.getElementById('totalAnime').textContent = total;
+            document.getElementById('watchedCount').textContent = watched;
+            document.getElementById('remainingCount').textContent = remaining;
+        }
+
+        function rollAnime() {
+            if (isRolling) return;
+            
+            const available = getFilteredAnime();
+            
+            if (available.length === 0) {
+                alert('No more anime available in this category! Clear your history to see them again.');
+                return;
+            }
+
+            isRolling = true;
+            const card = document.getElementById('animeCard');
+            const btn = document.getElementById('rollBtn');
+            
+            card.classList.add('rolling');
+            btn.disabled = true;
+            btn.textContent = '🎲 ROLLING...';
+            
+            let cycles = 0;
+            const maxCycles = 15;
+            const interval = setInterval(() => {
+                const random = available[Math.floor(Math.random() * available.length)];
+                updateCard(random, true);
+                cycles++;
+                
+                if (cycles >= maxCycles) {
+                    clearInterval(interval);
+                    finalizeRoll(available);
+                }
+            }, 100);
+        }
+
+        function updateCard(anime, isPreview = false) {
+            document.getElementById('animeTitle').textContent = anime.title;
+            document.getElementById('animeMeta').innerHTML = `
+                <span class="meta-tag year">${anime.year}</span>
+                <span class="meta-tag">${anime.genre}</span>
+            `;
+            document.getElementById('animeDesc').textContent = anime.desc;
+            
+            // Show where to watch
+            const whereToWatch = document.getElementById('whereToWatch');
+            const streamingList = document.getElementById('streamingList');
+            whereToWatch.style.display = 'block';
+            
+            const platformClasses = {
+                'Netflix': 'netflix',
+                'Crunchyroll': 'crunchyroll',
+                'Hulu': 'hulu',
+                'HiDive': 'hidive',
+                'Amazon Prime': 'prime',
+                'Funimation': 'funimation',
+                'HBO Max': 'hulu',
+                'Disney+': 'prime',
+                'YouTube': 'prime'
+            };
+            
+            streamingList.innerHTML = anime.streaming.map(platform => 
+                `<span class="streaming-tag ${platformClasses[platform] || ''}">${platform}</span>`
+            ).join('');
+            
+            const badge = document.getElementById('popularityBadge');
+            badge.style.display = 'inline-block';
+            badge.className = 'popularity-badge ' + anime.popularity;
+            badge.textContent = anime.popularity === 'popular' ? '⭐ Popular' : 
+                               anime.popularity === 'classic' ? '🏆 Classic' : '💎 Hidden Gem';
+            
+            const imageDiv = document.getElementById('animeImage');
+            if (!isPreview) {
+                imageDiv.innerHTML = `<img src="${anime.image}" alt="${anime.title}" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'anime-image-placeholder\\'>🎌</div>'">`;
+            }
+        }
+
+        function finalizeRoll(available) {
+            const selected = available[Math.floor(Math.random() * available.length)];
+            const card = document.getElementById('animeCard');
+            const btn = document.getElementById('rollBtn');
+            
+            updateCard(selected, false);
+            
+            // Mark as watched
+            watchedTitles.add(selected.title);
+            updateStats();
+            
+            card.classList.remove('rolling');
+            btn.disabled = false;
+            btn.textContent = '🎲 ROLL AGAIN';
+            isRolling = false;
+            
+            addToHistory(selected);
+        }
+
+        function addToHistory(anime) {
+            currentHistory.unshift(anime);
+            if (currentHistory.length > 6) currentHistory.pop();
+            
+            const grid = document.getElementById('historyGrid');
+            if (currentHistory.length === 1) {
+                grid.innerHTML = '';
+            }
+            
+            const div = document.createElement('div');
+            div.className = 'history-item watched';
+            div.innerHTML = `
+                <div class="history-item-title">${anime.title}</div>
+                <div class="history-item-year">${anime.year}</div>
+            `;
+            div.onclick = () => showAnime(anime.title);
+            
+            grid.insertBefore(div, grid.firstChild);
+            
+            // Keep only 6 items
+            while (grid.children.length > 6) {
+                grid.removeChild(grid.lastChild);
+            }
+        }
+
+        function showAnime(title) {
+            const anime = animeDatabase.find(a => a.title === title);
+            if (anime) {
+                updateCard(anime, false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function clearWatched() {
+            if (watchedTitles.size === 0) {
+                alert('No history to clear!');
+                return;
+            }
+            
+            if (confirm(`Clear all ${watchedTitles.size} watched anime from history?`)) {
+                watchedTitles.clear();
+                currentHistory = [];
+                updateStats();
+                
+                document.getElementById('historyGrid').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>History cleared! Start rolling again.</p>
+                    </div>
+                `;
+                
+                // Reset card
+                document.getElementById('animeTitle').textContent = 'Ready to Roll?';
+                document.getElementById('animeMeta').innerHTML = `
+                    <span class="meta-tag year">1998-2026</span>
+                    <span class="meta-tag">Various Genres</span>
+                `;
+                document.getElementById('animeDesc').textContent = 'Click the button below to randomly select an anime from our curated collection. Already watched anime won\'t appear again until you clear your history!';
+                document.getElementById('whereToWatch').style.display = 'none';
+                document.getElementById('popularityBadge').style.display = 'none';
+                document.getElementById('animeImage').innerHTML = '<div class="anime-image-placeholder">🎌</div>';
+            }
+        }
+
+        // Initialize
+        updateStats();
+    </script>
+</body>
+</html>
